@@ -17,6 +17,11 @@ public class PlayerHealth : MonoBehaviour
     /// <summary>Raised whenever health changes; passes the new current health value.</summary>
     public event Action<float> OnHealthChanged;
 
+    /// <summary>Raised once when health reaches 0. Cleared again when health is restored.</summary>
+    public event Action OnDeath;
+
+    public bool IsDead { get; private set; }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -40,6 +45,16 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = Mathf.Clamp(value, 0f, maxHealth);
         OnHealthChanged?.Invoke(currentHealth);
+
+        if (currentHealth <= 0f && !IsDead)
+        {
+            IsDead = true;
+            OnDeath?.Invoke();
+        }
+        else if (currentHealth > 0f)
+        {
+            IsDead = false; // restored (e.g. respawn)
+        }
     }
 
     public void TakeDamage(float amount)

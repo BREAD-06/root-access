@@ -6,6 +6,9 @@ using UnityEngine;
 /// </summary>
 public class TargetingSystem : MonoBehaviour
 {
+    // Globally-accessible singleton so UI (e.g. RealityConsole) can read the target.
+    public static TargetingSystem Instance { get; private set; }
+
     public float maxTargetDistance = 20f;
 
     public GameObject currentTarget { get; private set; }
@@ -15,8 +18,23 @@ public class TargetingSystem : MonoBehaviour
 
     private void Awake()
     {
+        // Enforce the singleton: keep the first instance, destroy any duplicates.
+        if (Instance != null && Instance != this)
+        {
+            Destroy(this);
+            return;
+        }
+        Instance = this;
+
         // ~ inverts the mask so the Player layer is excluded from the raycast.
         targetMask = ~LayerMask.GetMask("Player");
+    }
+
+    private void OnDestroy()
+    {
+        // Clear the static reference if this was the active instance.
+        if (Instance == this)
+            Instance = null;
     }
 
     private void Update()

@@ -16,7 +16,8 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 7f;
 
     [Header("Look")]
-    public float mouseSensitivity = 2f;
+    [Tooltip("Degrees of rotation per pixel of mouse movement.")]
+    public float mouseSensitivity = 0.1f;
 
     [Header("Ground Check")]
     [Tooltip("Empty child transform placed at the player's feet.")]
@@ -37,8 +38,11 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        // Keep the capsule upright; we rotate the body manually via mouse look.
+        // Freeze pitch/roll (X,Z) but leave YAW (Y) free so our manual mouse-look can
+        // turn the body. Collision-induced spin is killed separately by zeroing angular
+        // velocity every physics step (see FixedUpdate). Interpolation smooths motion.
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
     private void Start()
@@ -56,6 +60,11 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // Cancel any angular velocity a collision tried to impart, so walking into a
+        // box never spins the player/camera. Our yaw is applied directly via
+        // transform.Rotate in HandleLook, which this does not interfere with.
+        rb.angularVelocity = Vector3.zero;
+
         HandleGroundCheck();
         HandleMovement();
         HandleJump();
@@ -63,10 +72,20 @@ public class PlayerController : MonoBehaviour
 
     private void HandleLook()
     {
-        if (Mouse.current == null)
+        // Read pointer delta. Prefer Mouse, but fall back to the generic Pointer device so
+        // a laptop trackpad that isn't surfaced as a "Mouse" still drives the look.
+        Vector2 mouseDelta;
+        if (Mouse.current != null)
+            mouseDelta = Mouse.current.delta.ReadValue();
+        else if (Pointer.current != null)
+            mouseDelta = Pointer.current.delta.ReadValue();
+        else
             return;
 
-        Vector2 mouseDelta = Mouse.current.delta.ReadValue() * mouseSensitivity * Time.deltaTime;
+        // Delta is already a per-frame pixel delta — do NOT scale by Time.deltaTime
+        // (that makes look speed frame-rate dependent and far too slow). mouseSensitivity
+        // is interpreted as degrees per pixel.
+        mouseDelta *= mouseSensitivity;
 
         // Horizontal mouse rotates the body around Y.
         transform.Rotate(Vector3.up, mouseDelta.x);
@@ -98,10 +117,16 @@ public class PlayerController : MonoBehaviour
 
     private void HandleGroundCheck()
     {
+        bool wasGrounded = isGrounded;
         if (groundCheck != null)
             isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayers, QueryTriggerInteraction.Ignore);
         else
             isGrounded = false;
+            
+        if (!wasGrounded && isGrounded && Debugger01.Systems.CameraEffects.Instance != null)
+        {
+            Debugger01.Systems.CameraEffects.Instance.ApplyLandingShake();
+        }
     }
 
     private void HandleMovement()
