@@ -27,13 +27,13 @@ export default function EnemyManager({ playerPos }: EnemyManagerProps) {
           { id: 'reach_tower', label: 'Reach the tower in Sector 4', completed: false },
           { id: 'climb_tower', label: 'Climb the moving platforms', completed: false },
           { id: 'use_freeze', label: 'Use freeze() to stabilize platforms', completed: false }
-        ])
+        ], [80, 10, -40])
       }, 3000)
     }
   }, [mutations['delete:enforcer_01'], completeTask, setObjective])
   
   const enemies = useMemo(() => {
-    const list: { id: string, type: 'enforcer' | 'hunter', position: [number, number, number] }[] = []
+    const list: { id: string, type: 'enforcer' | 'hunter' | 'sentinel', position: [number, number, number] }[] = []
     
     // Act 1 Tutorial Drone (Spawns after player learns delete)
     if (isDeleted && currentAct === 'act1') {

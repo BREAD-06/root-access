@@ -118,6 +118,10 @@ export default function ThirdPersonCamera({ targetRef }: ThirdPersonCameraProps)
     // Look at target plus our pitch offset, so the camera doesn't always stare at feet when high up
     lookAt.set(target.x, target.y + LOOK_HEIGHT, target.z)
     camera.lookAt(lookAt)
+
+    // Export coordinates to window for global HUD updates (high-performance rendering)
+    ;(window as any).__cameraYaw = yaw.current
+    ;(window as any).__playerPosition = target
   })
 
   return null

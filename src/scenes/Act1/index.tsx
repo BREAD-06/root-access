@@ -1,13 +1,11 @@
 import { Suspense, useEffect, useRef } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Sky } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Vector3 } from 'three'
 import gsap from 'gsap'
 import CityGrid from './CityGrid'
 import RoadNetwork from './RoadNetwork'
 import CyberpunkDetails from './CyberpunkDetails'
-import EnvironmentManager from '../../components/World/EnvironmentManager'
 import MemoryArchive from './MemoryArchive'
 import CommunicationTower from './CommunicationTower'
 import IndustrialZone from './IndustrialZone'
@@ -19,6 +17,10 @@ import ArchitectHologram from '../../components/World/ArchitectHologram'
 import Targeter from '../../components/Player/Targeter'
 import { PostProcessingManager } from '../../components/VFX'
 import { useGameStore } from '../../systems/StabilitySystem'
+import EnvironmentStabilityManager from './EnvironmentStabilityManager'
+import Lighting from './Lighting'
+import DebrisStorm from './DebrisStorm'
+import WorldMarkers from '../../components/Player/WorldMarkers'
 
 /**
  * 4-second cinematic dolly across the city on load, then it simply rests.
@@ -87,8 +89,8 @@ export default function Act1Scene() {
         dpr={[1, 1.5]}
         gl={{ powerPreference: 'high-performance', antialias: false }}
       >
-        <Suspense fallback={null}>
-          <EnvironmentManager />
+          <EnvironmentStabilityManager />
+          <Lighting />
           <Physics timeStep={timeStep}>
             <CityGrid />
             <RoadNetwork />
@@ -105,7 +107,8 @@ export default function Act1Scene() {
           <PostProcessingManager />
           <CinematicCamera />
           <Targeter />
-        </Suspense>
+          <DebrisStorm />
+          <WorldMarkers targetRef={playerPos} />
       </Canvas>
     </Suspense>
   )

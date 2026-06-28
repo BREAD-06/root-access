@@ -36,6 +36,7 @@ export default function WorldObject({
   const currentAct = useGameStore((state) => state.currentAct)
   const mutations = useGameStore((state) => state.worldMutations)
   const isConsoleOpen = useGameStore((state) => state.isConsoleOpen)
+  const stabilityPercent = useGameStore((state) => state.stabilityPercent)
 
   const isDeleted = mutations[`delete:${name}`]
   const isCloned = mutations[`clone:${name}`]
@@ -63,9 +64,21 @@ export default function WorldObject({
   const driftSpeed = useMemo(() => 0.5 + (seedHash % 5) * 0.2, [seedHash])
   const driftAmplitude = useMemo(() => 1 + (seedHash % 3) * 0.8, [seedHash])
 
+  const scaleArr = useMemo<[number, number, number]>(
+    () => (typeof scale === 'number' ? [scale, scale, scale] : scale),
+    [scale]
+  )
+
   const deleteTimerRef = useRef(0)
   const jitterTimerRef = useRef(0)
+  const collapseTimerRef = useRef(0)
   const fullyHidden = useRef(false)
+
+  // Isolated state refs for Act 3 transient levitation machine
+  const levStateRef = useRef<'idle' | 'rising' | 'hovering' | 'falling' | 'cooldown'>('idle')
+  const levTimerRef = useRef(0)
+  const levHeightRef = useRef(0)
+  const levSpeedRef = useRef(1)
 
   // Set object name for raycast targeting
   useEffect(() => {
@@ -79,7 +92,7 @@ export default function WorldObject({
     if (fullyHidden.current || !innerRef.current) return
     // Fast exit: no mutations and act doesn't need per-frame work
     if (!needsPerFrame) return
-    
+
     // Scale delta for bullet time
     const dt = isConsoleOpen ? delta * 0.05 : delta
 
@@ -93,7 +106,7 @@ export default function WorldObject({
         g.visible = false
         return
       }
-      g.position.y += dt * 15
+      g.position.y += delta * 15
       const shrink = 1.0 - deleteTimerRef.current
       g.scale.multiplyScalar(shrink)
       return
@@ -106,61 +119,144 @@ export default function WorldObject({
       g.rotation.z += dt * 0.2
     }
 
-    // 3. Act 2: Subtle glitches (1-frame disappear or flicker)
-    if (currentAct === 'act2' && !isFrozen) {
-      if (Math.random() < 0.001) {
-        g.visible = false
-      } else {
-        g.visible = true
+    const isSmallObject = type === 'prop' || type === 'lamp'
+    const isLargeObject = type === 'building' || type === 'skyscraper' || type === 'lowDetail'
+    const t = state.clock.getElapsedTime()
+
+    // 3. Act 3 Jitter (Buildings) & Brief Levitation (Props/Lamps)
+    if (currentAct === 'act3' && !isFrozen && !isGravity && !isDeleted) {
+      if (isLargeObject) {
+        if (Math.random() < 0.002 && jitterTimerRef.current <= 0) {
+          jitterTimerRef.current = 0.25
+        }
+        if (jitterTimerRef.current > 0) {
+          jitterTimerRef.current -= dt
+          _jitter.set(
+            (Math.random() - 0.5) * 0.4,
+            (Math.random() - 0.5) * 0.1,
+            (Math.random() - 0.5) * 0.4
+          )
+          g.position.x = position[0] + _jitter.x
+          g.position.z = position[2] + _jitter.z
+        }
+      } else if (isSmallObject) {
+        if (levStateRef.current === 'idle') {
+          if (Math.random() < 0.0005) {
+            levStateRef.current = 'rising'
+            levTimerRef.current = 1.0 + Math.random() * 1.5
+            levHeightRef.current = 1.5 + (seedHash % 3) * 0.5
+            levSpeedRef.current = 1.5 + (seedHash % 3) * 0.5
+          }
+        }
+
+        if (levStateRef.current === 'rising') {
+          g.position.y += dt * 3 * levSpeedRef.current
+          g.position.x = position[0] + (Math.random() - 0.5) * 0.15
+          g.position.z = position[2] + (Math.random() - 0.5) * 0.15
+          if (g.position.y >= position[1] + levHeightRef.current) {
+            g.position.y = position[1] + levHeightRef.current
+            levStateRef.current = 'hovering'
+          }
+        } else if (levStateRef.current === 'hovering') {
+          levTimerRef.current -= dt
+          g.position.y = position[1] + levHeightRef.current + Math.sin(t * 8) * 0.08
+          g.position.x = position[0] + (Math.random() - 0.5) * 0.1
+          g.position.z = position[2] + (Math.random() - 0.5) * 0.1
+          g.rotation.y += dt * 0.5
+          if (levTimerRef.current <= 0) {
+            levStateRef.current = 'falling'
+          }
+        } else if (levStateRef.current === 'falling') {
+          g.position.y -= dt * 4 * levSpeedRef.current
+          if (g.position.y <= position[1]) {
+            g.position.y = position[1]
+            g.position.x = position[0]
+            g.position.z = position[2]
+            g.rotation.y = rotation[1]
+            levStateRef.current = 'cooldown'
+            levTimerRef.current = 4.0 + Math.random() * 6.0
+          }
+        } else if (levStateRef.current === 'cooldown') {
+          levTimerRef.current -= dt
+          if (levTimerRef.current <= 0) {
+            levStateRef.current = 'idle'
+          }
+        }
       }
     }
 
-    // 4. Act 3 jitter (floating props)
-    if (currentAct === 'act3' && !isFrozen) {
-      if (Math.random() < 0.002 && jitterTimerRef.current <= 0) {
-        jitterTimerRef.current = 0.25
-      }
-      if (jitterTimerRef.current > 0) {
-        jitterTimerRef.current -= dt
-        _jitter.set(
-          (Math.random() - 0.5) * 0.4,
-          (Math.random() - 0.5) * 0.1,
-          (Math.random() - 0.5) * 0.4
-        )
-        g.position.x = position[0] + _jitter.x
-        g.position.z = position[2] + _jitter.z
-        
-        // Small props float up slightly
-        if (type === 'prop') {
-          g.position.y = position[1] + 1.0 + Math.random() * 0.5
+    // 4. Act 4 Permanent Hover & Drift (Props/Lamps)
+    if (currentAct === 'act4' && !isGravity && !isFrozen && !isDeleted) {
+      if (isSmallObject) {
+        g.position.y = position[1] + 2.0 + Math.sin(t * 0.8 + phaseOffset) * 1.0 * driftAmplitude
+        const driftX = Math.sin(t * 0.4 + phaseOffset) * 1.2
+        const driftZ = Math.cos(t * 0.4 + phaseOffset) * 1.2
+        g.position.x = position[0] + driftX
+        g.position.z = position[2] + driftZ
+        g.rotation.y += dt * driftSpeed * 0.6
+        g.rotation.x += dt * driftSpeed * 0.3
+        if (Math.random() < 0.005) {
+          g.rotation.z += (Math.random() - 0.5) * 1.0
         }
       } else {
-        if (type === 'prop') g.position.y = position[1]
+        g.position.y = position[1] + Math.sin(t * 1.5 + phaseOffset) * 0.05
       }
     }
 
-    // 5. Act 4/5 hover & geometry disappearances
-    if ((currentAct === 'act4' || currentAct === 'act5') && !isGravity && !isFrozen) {
-      // Missing geometry
-      if (Math.random() < 0.0005) {
-        g.visible = !g.visible
+    // 5. Act 5 Massive Levitation & Collapse
+    if (currentAct === 'act5' && !isGravity && !isFrozen && !isDeleted) {
+      if (isLargeObject) {
+        const floatHeight = 5.0 + (seedHash % 5) * 2.0
+        g.position.y = position[1] + floatHeight + Math.sin(t * 0.3 + phaseOffset) * 1.5 * driftAmplitude
+        g.position.x = position[0] + Math.sin(t * 0.15 + phaseOffset) * 2.0
+        g.position.z = position[2] + Math.cos(t * 0.15 + phaseOffset) * 2.0
+        g.rotation.x = rotation[0] + Math.sin(t * 0.1 + phaseOffset) * 0.12
+        g.rotation.z = rotation[2] + Math.cos(t * 0.1 + phaseOffset) * 0.12
+        if (Math.random() < 0.002) {
+          g.position.x += (Math.random() - 0.5) * 2.5
+          g.position.z += (Math.random() - 0.5) * 2.5
+        }
+      } else if (isSmallObject) {
+        g.position.y = position[1] + 4.0 + Math.sin(t * 1.5 + phaseOffset) * 2.5 * driftAmplitude
+        g.position.x = position[0] + Math.sin(t * 0.9 + phaseOffset) * 3.0
+        g.position.z = position[2] + Math.cos(t * 0.9 + phaseOffset) * 3.0
+        g.rotation.y += dt * driftSpeed * 1.5
+        g.rotation.x += dt * driftSpeed * 0.8
+        if (Math.random() < 0.01) {
+          g.position.y += (Math.random() - 0.5) * 0.8
+        }
       }
-      
-      // Floating objects
-      if (type === 'prop' || type === 'lamp' || (type === 'building' && seedHash % 10 < 3)) {
-        const t = state.clock.getElapsedTime()
-        g.position.y =
-          position[1] + Math.sin(t * 0.8 + phaseOffset) * 0.8 * driftAmplitude + (currentAct === 'act5' ? 5 : 2)
-        g.rotation.z = rotation[2] + Math.sin(t * 0.3 + phaseOffset) * 0.05
-        g.rotation.x = rotation[0] + Math.cos(t * 0.3 + phaseOffset) * 0.05
+    }
+
+    // 6. Act 5 Object Disappearance System (for static buildings/props/lamps)
+    if (currentAct === 'act5' && type !== 'npc' && !isDeleted && !isGravity && !isFrozen) {
+      const collapseThreshold = stabilityPercent * 5
+      const objectIdNum = seedHash % 100
+
+      if (objectIdNum > collapseThreshold) {
+        collapseTimerRef.current += delta
+        if (collapseTimerRef.current >= 1.0) {
+          fullyHidden.current = true
+          g.visible = false
+          return
+        }
+
+        const shrink = Math.max(0, 1.0 - collapseTimerRef.current)
+        g.scale.set(scaleArr[0] * shrink, scaleArr[1] * shrink, scaleArr[2] * shrink)
+
+        _jitter.set(
+          (Math.random() - 0.5) * 0.6 * collapseTimerRef.current,
+          (Math.random() - 0.5) * 0.6 * collapseTimerRef.current,
+          (Math.random() - 0.5) * 0.6 * collapseTimerRef.current
+        )
+        g.position.x += _jitter.x
+        g.position.y += _jitter.y + collapseTimerRef.current * 3.5
+        g.position.z += _jitter.z
       }
     }
   })
 
   if (fullyHidden.current) return null
-
-  const scaleArr: [number, number, number] =
-    typeof scale === 'number' ? [scale, scale, scale] : scale
 
   return (
     <group ref={groupRef}>

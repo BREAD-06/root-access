@@ -78,6 +78,9 @@ function SingleNPC({ npc }: { npc: NPCState }) {
     
     if (glitchTimer.current > 0) glitchTimer.current -= dt
 
+    // Check if simulation act has NPC glitches enabled
+    const isGlitching = currentAct === 'act4'
+
     // Reuse scratch vector instead of allocating
     dir.current.copy(targetPos.current).sub(currentPos.current)
     const dist = dir.current.length()
@@ -106,9 +109,29 @@ function SingleNPC({ npc }: { npc: NPCState }) {
       dir.current.normalize()
       currentPos.current.addScaledVector(dir.current, npc.speed * dt)
 
+      // Add high-frequency visual position jitter if glitching
+      let jX = 0, jY = 0, jZ = 0
+      if (isGlitching && Math.random() < 0.15) {
+        jX = (Math.random() - 0.5) * 0.5
+        jY = (Math.random() - 0.5) * 0.3
+        jZ = (Math.random() - 0.5) * 0.5
+      }
+
       // Mutate Three.js objects directly — no React re-render
-      groupRef.current.position.set(currentPos.current.x, 0.05, currentPos.current.z)
+      groupRef.current.position.set(
+        currentPos.current.x + jX,
+        0.05 + jY,
+        currentPos.current.z + jZ
+      )
       groupRef.current.rotation.y = Math.atan2(dir.current.x, dir.current.z)
+
+      // Glitch scale stuttering
+      if (isGlitching && Math.random() < 0.08) {
+        const sG = 1.0 + (Math.random() - 0.5) * 0.4
+        groupRef.current.scale.set(sG, sG, sG)
+      } else {
+        groupRef.current.scale.set(1.0, 1.0, 1.0)
+      }
     }
   })
 
