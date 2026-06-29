@@ -21,11 +21,7 @@ export default function Enforcer({ id, startPosition, playerPos }: EnforcerProps
   const currentPos = useRef(new Vector3(...startPosition))
   const attackCooldown = useRef(0)
   
-  const body = useRef<Group>(null)
   const laserRef = useRef<Group>(null)
-
-  // Use refs for positions to avoid closures capturing stale state
-  const targetVec = useRef<Vector3>(new Vector3())
 
   useFrame((_, delta) => {
     if (isDeleted || isFrozen || !groupRef.current) return

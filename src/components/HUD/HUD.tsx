@@ -1,12 +1,21 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../../systems/StabilitySystem'
 import StabilityMeter from './StabilityMeter'
 import DialogueOverlay from './DialogueOverlay'
+import StabilityStatusPanel from './StabilityStatusPanel'
+import PlayerUI from './PlayerUI'
+import MissionUI from './MissionUI'
+import Minimap from './Minimap'
+import Compass from './Compass'
+import WorldMap from './WorldMap'
 
 export default function HUD() {
   const currentAct = useGameStore((state) => state.currentAct)
   const stabilityPercent = useGameStore((state) => state.stabilityPercent)
   const activeTarget = useGameStore((state) => state.activeTarget)
   const unlockedCommands = useGameStore((state) => state.unlockedCommands)
+
+  const [isMapOpen, setIsMapOpen] = useState(false)
 
   // Don't render general HUD in prologue or core confrontation scenes
   const isMinimalHUD = currentAct === 'prologue' || currentAct === 'core'
@@ -22,75 +31,113 @@ export default function HUD() {
     core: 'SYSTEM CORE CONFRONTATION',
   }
 
+  // Toggle map on 'M' keypress (only when terminal console is closed)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isMinimalHUD) return
+      if (e.key.toLowerCase() === 'm' && !useGameStore.getState().isConsoleOpen) {
+        e.preventDefault()
+        setIsMapOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMinimalHUD])
+
+  // Style colors matching act progression
+  const accentBorder = currentAct === 'act5' ? 'border-purple-950/80 bg-black/85 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'border-emerald-950 bg-black/75'
+  const textAccent = currentAct === 'act5' ? 'text-purple-400' : 'text-emerald-500'
+  const textTitle = currentAct === 'act5' ? 'text-purple-600 border-purple-950' : 'text-emerald-700 border-emerald-950'
+
   return (
     <>
-      {/* Dialogue and Stability overlay layers */}
+      {/* 1. High-priority dialogue screens */}
       <DialogueOverlay />
-      <StabilityMeter />
 
-      {!isMinimalHUD && (
-        <div className="fixed inset-0 pointer-events-none z-30 font-mono text-emerald-500 text-xs">
-          
-          {/* Top-Left Debugger Panel */}
-          <div className="absolute top-6 left-6 p-4 border border-emerald-950 bg-black/75 backdrop-blur-sm rounded w-80">
-            <div className="flex justify-between items-center text-[10px] text-emerald-700 border-b border-emerald-950 pb-1 mb-2 font-bold tracking-widest uppercase">
-              <span>DEBUGGER ONLINE</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            </div>
-            <div className="space-y-1">
-              <div>ACT: <span className="text-white">{actNames[currentAct]}</span></div>
-              <div>MAIN CORE: <span className="text-white">GENESIS_GRID_LINK</span></div>
-              <div>STABILITY: <span className="text-white">{stabilityPercent}%</span></div>
-            </div>
-          </div>
+      {/* 2. Toggleable Full Screen World Map Overlay */}
+      {isMapOpen ? (
+        <WorldMap onClose={() => setIsMapOpen(false)} />
+      ) : (
+        <>
+          {/* 3. Core stability meters */}
+          <StabilityStatusPanel />
+          <StabilityMeter />
 
-          {/* Bottom-Left Command Database Panel */}
-          <div className="absolute bottom-6 left-6 p-4 border border-emerald-950 bg-black/75 backdrop-blur-sm rounded w-80">
-            <div className="text-[10px] text-emerald-700 border-b border-[#134e4a] pb-1 mb-2 font-bold tracking-widest uppercase">
-              DECOMPILER_DATABASE
-            </div>
-            <div className="space-y-1.5 text-[10px]">
-              <div className="flex justify-between">
-                <span>delete(target)</span>
-                <span className="text-emerald-400 font-bold">[ACTIVE]</span>
+          {/* 4. General Gameplay HUD (Not visible in prologue/core) */}
+          {!isMinimalHUD && (
+            <div className={`fixed inset-0 pointer-events-none z-30 font-mono text-xs ${currentAct === 'act5' ? 'text-purple-400' : 'text-emerald-500'}`}>
+              
+              {/* Top Compass banner */}
+              <Compass />
+
+              {/* Bottom-left rotating Minimap */}
+              <Minimap />
+
+              {/* Bottom-left health status */}
+              <PlayerUI />
+
+              {/* Top-right objective directives */}
+              <MissionUI />
+
+              {/* Top-Left Debugger Panel */}
+              <div className={`absolute top-6 left-6 p-4 border rounded w-80 backdrop-blur-sm pointer-events-auto transition-all duration-300 ${accentBorder}`}>
+                <div className={`flex justify-between items-center text-[10px] border-b pb-1 mb-2 font-bold tracking-widest uppercase ${textTitle}`}>
+                  <span>DEBUGGER ONLINE</span>
+                  <span className={`w-2 h-2 rounded-full animate-ping ${currentAct === 'act5' ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                </div>
+                <div className="space-y-1 text-white">
+                  <div>ACT: <span>{actNames[currentAct]}</span></div>
+                  <div>MAIN CORE: <span>GENESIS_GRID_LINK</span></div>
+                  <div>STABILITY: <span className={stabilityPercent < 25 ? 'text-red-500 font-bold animate-pulse' : ''}>{stabilityPercent}%</span></div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>clone(target)</span>
-                <span className={unlockedCommands.includes('clone') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
-                  {unlockedCommands.includes('clone') ? '[UNLOCKED]' : '[LOCKED: ACT 2]'}
-                </span>
+
+              {/* Bottom-Left Command Database Panel (Stacked cleanly above the Minimap & Health Bar) */}
+              <div className={`absolute bottom-[162px] left-6 p-4 border rounded w-72 backdrop-blur-sm pointer-events-auto transition-all duration-300 ${accentBorder}`}>
+                <div className={`text-[10px] border-b pb-1 mb-2 font-bold tracking-widest uppercase ${textTitle}`}>
+                  DECOMPILER_DATABASE
+                </div>
+                <div className="space-y-1.5 text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-white">delete(target)</span>
+                    <span className={`${textAccent} font-bold`}>[ACTIVE]</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white">clone(target)</span>
+                    <span className={unlockedCommands.includes('clone') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
+                      {unlockedCommands.includes('clone') ? '[UNLOCKED]' : '[LOCKED: ACT 2]'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white">freeze(target)</span>
+                    <span className={unlockedCommands.includes('freeze') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
+                      {unlockedCommands.includes('freeze') ? '[UNLOCKED]' : '[LOCKED: ACT 3]'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white">gravity(target)</span>
+                    <span className={unlockedCommands.includes('gravity') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
+                      {unlockedCommands.includes('gravity') ? '[UNLOCKED]' : '[LOCKED: ACT 4]'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>freeze(target)</span>
-                <span className={unlockedCommands.includes('freeze') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
-                  {unlockedCommands.includes('freeze') ? '[UNLOCKED]' : '[LOCKED: ACT 3]'}
-                </span>
+
+              {/* Center Targeting HUD reticle details */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-8 h-8 flex items-center justify-center">
+                  <div className={`w-1.5 h-1.5 rounded-full ${currentAct === 'act5' ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                  <div className={`absolute inset-0 border border-dashed rounded-full animate-[spin_20s_linear_infinite] ${
+                    activeTarget 
+                      ? (currentAct === 'act5' ? 'border-purple-400 scale-125' : 'border-cyan-400 scale-125') 
+                      : (currentAct === 'act5' ? 'border-purple-800' : 'border-emerald-800')
+                  }`} />
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>gravity(target)</span>
-                <span className={unlockedCommands.includes('gravity') ? 'text-cyan-400 font-bold' : 'text-gray-600'}>
-                  {unlockedCommands.includes('gravity') ? '[UNLOCKED]' : '[LOCKED: ACT 4]'}
-                </span>
-              </div>
+
             </div>
-          </div>
-
-          {/* Center Targeting HUD HUD reticle details */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            
-            {/* Center screen crosshair */}
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              {/* Spinning circular reticle bounds */}
-              <div className={`absolute inset-0 border border-dashed rounded-full animate-[spin_20s_linear_infinite] ${
-                activeTarget ? 'border-cyan-400 scale-125' : 'border-emerald-800'
-              }`} />
-            </div>
-
-            {/* Target locking description panel (floats to the right of crosshair) */}
-
-          </div>
-        </div>
+          )}
+        </>
       )}
     </>
   )

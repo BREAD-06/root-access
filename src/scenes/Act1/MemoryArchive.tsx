@@ -17,7 +17,7 @@ export default function MemoryArchive() {
     setObjective('Reach the Memory Archive', [
       { id: 'talk_citizens', label: 'Talk to 3 citizens (Optional)', completed: false },
       { id: 'reach_archive', label: 'Approach the Archive', completed: false }
-    ])
+    ], [0, 2, 38])
   }, [])
 
   // Once the wall is deleted, complete the task and update objective
@@ -30,7 +30,7 @@ export default function MemoryArchive() {
       setTimeout(() => {
         setObjective('Survive the Security Response', [
           { id: 'destroy_drone', label: 'Use delete() on the Enforcer Drone', completed: false },
-        ])
+        ], [0, 15, 60])
       }, 3000)
     }
   }, [isDeleted, completeTask, setObjective, unlockCommand])

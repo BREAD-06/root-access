@@ -16,7 +16,7 @@ export default function RealityConsole() {
   const commandsUsed = useGameStore((state) => state.commandsUsed)
   const unlockedCommands = useGameStore((state) => state.unlockedCommands)
   const activeTarget = useGameStore((state) => state.activeTarget)
-  const useCommand = useGameStore((state) => state.useCommand)
+  const executeCommand = useGameStore((state) => state.useCommand)
 
   const [inputVal, setInputVal] = useState('')
   const [logs, setLogs] = useState<LogEntry[]>([
@@ -96,6 +96,53 @@ export default function RealityConsole() {
     setLogs(newLogs)
     setInputVal('')
 
+    // Developer Test Overrides
+    const testStabilityMatch = commandText.match(/^stability\((\d+)\)$/i)
+    if (testStabilityMatch) {
+      const value = Math.max(0, Math.min(100, parseInt(testStabilityMatch[1], 10)))
+      useGameStore.setState({ stabilityPercent: value })
+      useGameStore.getState().checkStabilityThreshold()
+      setLogs((prev) => [...prev, { text: `[TEST]: SIMULATION STABILITY SET TO ${value}%`, type: 'success' }])
+      return
+    }
+
+    const testActMatch = commandText.match(/^act\((act[1-5]|core|prologue)\)$/i)
+    if (testActMatch) {
+      const act = testActMatch[1].toLowerCase() as any
+      let stab = 100
+      if (act === 'act2') stab = 80
+      else if (act === 'act3') stab = 60
+      else if (act === 'act4') stab = 40
+      else if (act === 'act5') stab = 20
+      else if (act === 'core') stab = 0
+
+      useGameStore.setState({ currentAct: act, stabilityPercent: stab })
+      const unlocked = ['delete']
+      if (['act2', 'act3', 'act4', 'act5'].includes(act)) unlocked.push('clone')
+      if (['act3', 'act4', 'act5'].includes(act)) unlocked.push('freeze')
+      if (['act4', 'act5'].includes(act)) unlocked.push('gravity')
+      useGameStore.setState({ unlockedCommands: unlocked })
+      
+      setLogs((prev) => [...prev, { text: `[TEST]: JUMPED TO ${act.toUpperCase()} (STABILITY: ${stab}%)`, type: 'success' }])
+      return
+    }
+
+    const testTimeMatch = commandText.match(/^time\((\d+(\.\d+)?)\)$/i)
+    if (testTimeMatch) {
+      const multiplier = parseFloat(testTimeMatch[1])
+      useGameStore.setState({ timeMultiplier: multiplier })
+      setLogs((prev) => [...prev, { text: `[TEST]: TIME MULTIPLIER SET TO ${multiplier}x`, type: 'success' }])
+      return
+    }
+
+    const testSetTimeMatch = commandText.match(/^set_time\((\d+(\.\d+)?)\)$/i)
+    if (testSetTimeMatch) {
+      const progress = Math.max(0, Math.min(1.0, parseFloat(testSetTimeMatch[1])))
+      useGameStore.setState({ timeOfDay: progress })
+      setLogs((prev) => [...prev, { text: `[TEST]: TIME OF DAY SET TO ${Math.round(progress * 100)}% (${progress})`, type: 'success' }])
+      return
+    }
+
     // 2. Parse command
     const parsed = parseCommand(commandText, activeTarget)
 
@@ -119,7 +166,7 @@ export default function RealityConsole() {
 
     // 4. Run command
     playSuccessSound()
-    useCommand(command, target)
+    executeCommand(command, target)
 
     let outputText = ''
     switch (command) {

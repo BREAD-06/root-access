@@ -44,15 +44,15 @@ export const ACT_ORDER: Act[] = [
 
 /**
  * Map a stability percentage to the act it belongs to, using the thresholds
- * (100→Act1, 90→Act2, 75→Act3, 55→Act4, 35→Act5, 10→Core).
+ * (100→Act1, 80→Act2, 60→Act3, 40→Act4, 20→Act5, 0→Core).
  * Prologue is a narrative intro and is never derived from stability.
  */
 export function actForStability(stability: number): Act {
-  if (stability <= 10) return 'core'
-  if (stability <= 35) return 'act5'
-  if (stability <= 55) return 'act4'
-  if (stability <= 75) return 'act3'
-  if (stability <= 90) return 'act2'
+  if (stability <= 0) return 'core'
+  if (stability <= 20) return 'act5'
+  if (stability <= 40) return 'act4'
+  if (stability <= 60) return 'act3'
+  if (stability <= 80) return 'act2'
   return 'act1'
 }
 
@@ -71,10 +71,14 @@ interface GameState {
   isConsoleOpen: boolean
   currentDialogue: string[] | null
   dialogueIndex: number
+  timeOfDay: number
+  timeMultiplier: number
   
   // ---- Mission System ----
   currentObjective: string
   currentTasks: { id: string; label: string; completed: boolean }[]
+  objectivePosition: [number, number, number] | null
+  customWaypoint: [number, number, number] | null
 
   // ---- Player Combat ----
   playerHealth: number
@@ -92,7 +96,8 @@ interface GameState {
   advanceDialogue: () => void
   
   // ---- Mission Actions ----
-  setObjective: (objective: string, tasks: { id: string; label: string; completed: boolean }[]) => void
+  setObjective: (objective: string, tasks: { id: string; label: string; completed: boolean }[], position?: [number, number, number] | null) => void
+  setCustomWaypoint: (waypoint: [number, number, number] | null) => void
   completeTask: (taskId: string) => void
   unlockCommand: (command: string) => void
   
@@ -146,10 +151,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   isConsoleOpen: false,
   currentDialogue: null,
   dialogueIndex: 0,
+  timeOfDay: 0.0,
+  timeMultiplier: 1.0,
   
   // Mission Default
   currentObjective: 'Explore the city',
   currentTasks: [],
+  objectivePosition: null,
+  customWaypoint: null,
   
   // Player Default
   playerHealth: 100,
@@ -279,8 +288,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   // ---- Mission Actions ----
-  setObjective: (objective, tasks) => {
-    set({ currentObjective: objective, currentTasks: tasks })
+  setObjective: (objective, tasks, position = null) => {
+    set({ currentObjective: objective, currentTasks: tasks, objectivePosition: position })
+  },
+  setCustomWaypoint: (waypoint) => {
+    set({ customWaypoint: waypoint })
   },
   completeTask: (taskId) => {
     set((state) => ({

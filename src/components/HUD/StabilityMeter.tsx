@@ -43,7 +43,7 @@ export default function StabilityMeter() {
 
   return (
     <div
-      className={`fixed top-6 right-6 z-40 p-4 border rounded bg-black/85 backdrop-blur-md transition-all duration-300 font-mono w-72 ${borderClass} ${
+      className={`fixed top-[144px] right-6 z-40 p-4 border rounded bg-black/85 backdrop-blur-md transition-all duration-300 font-mono w-72 ${borderClass} ${
         pulse ? 'scale-105 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.4)]' : ''
       }`}
     >
