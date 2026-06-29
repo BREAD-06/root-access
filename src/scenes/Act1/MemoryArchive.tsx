@@ -27,6 +27,11 @@ export default function MemoryArchive() {
       completeTask('reach_archive')
       unlockCommand('freeze')
       
+      // Trigger Cutscene 2 (First Glitch Discovery)
+      import('../../systems/CutsceneSystem').then((module) => {
+        module.useCutsceneStore.getState().startCutscene('first_glitch')
+      })
+      
       setTimeout(() => {
         setObjective('Survive the Security Response', [
           { id: 'destroy_drone', label: 'Use delete() on the Enforcer Drone', completed: false },

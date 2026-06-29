@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useGameStore } from '../../systems/StabilitySystem'
 import { playKeySound, playSynthBeep } from '../../utils/sound'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
 
 export default function DialogueOverlay() {
   const currentDialogue = useGameStore((state) => state.currentDialogue)
   const dialogueIndex = useGameStore((state) => state.dialogueIndex)
   const advanceDialogue = useGameStore((state) => state.advanceDialogue)
+  const activeCutscene = useCutsceneStore((state) => state.activeCutscene)
 
   const [displayText, setDisplayText] = useState('')
   const [isDone, setIsDone] = useState(false)
@@ -74,6 +76,19 @@ export default function DialogueOverlay() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [currentDialogue, isDone, rawLine, advanceDialogue])
+
+  // Auto-advance subtitles during active cutscenes
+  useEffect(() => {
+    if (!currentDialogue || !activeCutscene) return
+
+    // Auto advance 1.8 seconds after a line completes typing
+    if (isDone) {
+      const timer = setTimeout(() => {
+        advanceDialogue()
+      }, 1800)
+      return () => clearTimeout(timer)
+    }
+  }, [currentDialogue, activeCutscene, isDone, advanceDialogue])
 
   if (!currentDialogue) return null
 

@@ -21,35 +21,13 @@ import EnvironmentStabilityManager from './EnvironmentStabilityManager'
 import Lighting from './Lighting'
 import DebrisStorm from './DebrisStorm'
 import WorldMarkers from '../../components/Player/WorldMarkers'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
+import CutsceneCamera from '../../components/World/CutsceneCamera'
+import OpenWorldExpansion from './OpenWorldExpansion'
+import MemoryCollectible from '../../components/World/MemoryCollectible'
+import RebelCamp from '../../components/World/RebelCamp'
 
-/**
- * 4-second cinematic dolly across the city on load, then it simply rests.
- * Control will later hand off to the player (not added yet).
- */
-function CinematicCamera() {
-  const camera = useThree((s) => s.camera)
 
-  useEffect(() => {
-    const lookTarget = new Vector3(0, 10, 0)
-    camera.position.set(-95, 30, 95)
-    camera.lookAt(lookTarget)
-
-    const tl = gsap.timeline()
-    tl.to(camera.position, {
-      x: 95,
-      z: 95,
-      duration: 4,
-      ease: 'power1.inOut',
-      onUpdate: () => camera.lookAt(lookTarget),
-    })
-
-    return () => {
-      tl.kill()
-    }
-  }, [camera])
-
-  return null
-}
 
 /** Black boot overlay shown before the simulation renders. */
 function EnteringSimulation() {
@@ -78,6 +56,20 @@ export default function Act1Scene() {
   const playerPos = useRef(new Vector3(0, 2, 24))
   const isConsoleOpen = useGameStore((state) => state.isConsoleOpen)
   
+  const startCutscene = useCutsceneStore((state) => state.startCutscene)
+  const playedCutscenes = useCutsceneStore((state) => state.playedCutscenes)
+
+  // Trigger Cutscene 1 (The World Appears Normal) on initial mount
+  useEffect(() => {
+    if (!playedCutscenes['world_normal']) {
+      // Small delay to ensure canvas and textures are ready
+      const timer = setTimeout(() => {
+        startCutscene('world_normal')
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [playedCutscenes, startCutscene])
+
   // Bullet Time: Slow down physics to 5% speed when the console is open
   const timeStep = isConsoleOpen ? (1 / 60) * 0.05 : 1 / 60
 
@@ -103,9 +95,12 @@ export default function Act1Scene() {
             <ArchitectHologram />
             <Player targetRef={playerPos} />
             <ThirdPersonCamera targetRef={playerPos} />
+            <OpenWorldExpansion />
+            <MemoryCollectible />
+            <RebelCamp />
           </Physics>
           <PostProcessingManager />
-          <CinematicCamera />
+          <CutsceneCamera />
           <Targeter />
           <DebrisStorm />
           <WorldMarkers targetRef={playerPos} />

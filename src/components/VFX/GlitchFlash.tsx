@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useGameStore } from '../../systems/StabilitySystem'
+import { playGlitchSound } from '../../utils/sound'
 
 /**
  * GlitchFlash triggers a quick fullscreen flash on command invocation.
@@ -14,6 +15,7 @@ export default function GlitchFlash() {
   useEffect(() => {
     if (commandsUsed > prevCommands.current) {
       setActive(true)
+      playGlitchSound()
       // Flash lasts for 150ms
       const t = setTimeout(() => setActive(false), 150)
       prevCommands.current = commandsUsed

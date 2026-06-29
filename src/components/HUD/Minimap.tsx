@@ -85,6 +85,110 @@ export default function Minimap() {
       ctx.translate(center, center)
       ctx.rotate(-yaw - Math.PI) // Map rotates in reverse of camera rotation
 
+      // Draw Forest Region (glowing dark green/teal ring)
+      const worldCenterX = -px * scale
+      const worldCenterZ = -pz * scale
+      ctx.fillStyle = 'rgba(13, 148, 136, 0.07)'
+      ctx.beginPath()
+      ctx.arc(worldCenterX, worldCenterZ, 440 * scale, 0, Math.PI * 2)
+      ctx.arc(worldCenterX, worldCenterZ, 115 * scale, 0, Math.PI * 2, true) // hole for central city
+      ctx.fill()
+
+      // Draw Digital Lake (cyan pond)
+      const lakeX = (170 - px) * scale
+      const lakeZ = (-170 - pz) * scale
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.15)'
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.35)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.arc(lakeX, lakeZ, 65 * scale, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+
+      // Draw Abandoned Facility Outpost Landmark (orange warning triangle)
+      const outpostX = (-200 - px) * scale
+      const outpostZ = (-250 - pz) * scale
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.3)'
+      ctx.strokeStyle = 'rgba(249, 115, 22, 0.7)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(outpostX, outpostZ - 6)
+      ctx.lineTo(outpostX - 6, outpostZ + 6)
+      ctx.lineTo(outpostX + 6, outpostZ + 6)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      // Align landmark label text upright
+      ctx.save()
+      ctx.translate(outpostX, outpostZ + 12)
+      ctx.rotate(yaw + Math.PI) // counteract map rotation
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'
+      ctx.font = 'bold 7px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('OUTPOST', 0, 0)
+      ctx.restore()
+
+      // Draw Rebel Camp Landmark (teal triangle)
+      const rebelX = (-250 - px) * scale
+      const rebelZ = (-220 - pz) * scale
+      ctx.fillStyle = 'rgba(20, 184, 166, 0.25)'
+      ctx.strokeStyle = 'rgba(20, 184, 166, 0.75)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(rebelX, rebelZ - 5)
+      ctx.lineTo(rebelX - 5, rebelZ + 5)
+      ctx.lineTo(rebelX + 5, rebelZ + 5)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      // Rebel Camp Text label
+      ctx.save()
+      ctx.translate(rebelX, rebelZ + 11)
+      ctx.rotate(yaw + Math.PI)
+      ctx.fillStyle = 'rgba(20, 184, 166, 0.65)'
+      ctx.font = 'bold 7px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('REBELS', 0, 0)
+      ctx.restore()
+
+      // Draw Backdoor Terminal Landmark (cyan square)
+      const backdoorX = (300 - px) * scale
+      const backdoorZ = (-260 - pz) * scale
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.25)'
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.75)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.rect(backdoorX - 4, backdoorZ - 4, 8, 8)
+      ctx.fill()
+      ctx.stroke()
+
+      // Backdoor Text label
+      ctx.save()
+      ctx.translate(backdoorX, backdoorZ + 11)
+      ctx.rotate(yaw + Math.PI)
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.65)'
+      ctx.font = 'bold 7px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('BACKDOOR', 0, 0)
+      ctx.restore()
+
+      // Draw Memory Fragment Landmark (glowing cyan diamond)
+      const shardX = (-320 - px) * scale
+      const shardZ = (180 - pz) * scale
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.3)'
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(shardX, shardZ - 4)
+      ctx.lineTo(shardX - 4, shardZ)
+      ctx.lineTo(shardX, shardZ + 4)
+      ctx.lineTo(shardX + 4, shardZ)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
       // 3. Draw Roads (cyan corridors)
       ctx.strokeStyle = 'rgba(6, 182, 212, 0.18)'
       ctx.lineWidth = 8

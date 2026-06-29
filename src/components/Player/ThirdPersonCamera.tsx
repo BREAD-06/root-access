@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRapier } from '@react-three/rapier'
 import { Vector3 } from 'three'
 import { useGameStore } from '../../systems/StabilitySystem'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
 
 const DISTANCE = 5 // units behind the player
 const HEIGHT = 2 // units above the player
@@ -43,6 +44,9 @@ export default function ThirdPersonCamera({ targetRef }: ThirdPersonCameraProps)
   // Horizontal and vertical orbit from mouse movement (only while pointer-locked).
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      const isCutsceneActive = useCutsceneStore.getState().activeCutscene !== null
+      if (isCutsceneActive) return
+
       if (document.pointerLockElement && !useGameStore.getState().isConsoleOpen) {
         targetYaw.current -= e.movementX * MOUSE_SENSITIVITY
         // Pitch with limits to avoid looking completely straight up or down
@@ -51,6 +55,9 @@ export default function ThirdPersonCamera({ targetRef }: ThirdPersonCameraProps)
       }
     }
     const onClick = () => {
+      const isCutsceneActive = useCutsceneStore.getState().activeCutscene !== null
+      if (isCutsceneActive) return
+
       if (!document.pointerLockElement && document.activeElement?.tagName !== 'INPUT') {
         document.body.requestPointerLock().catch(() => {})
       }
@@ -65,13 +72,21 @@ export default function ThirdPersonCamera({ targetRef }: ThirdPersonCameraProps)
 
   // Take over from the cinematic intro pan.
   useEffect(() => {
-    const id = window.setTimeout(() => {
+    const played = useCutsceneStore.getState().playedCutscenes['world_normal']
+    if (played) {
       active.current = true
-    }, HANDOFF_MS)
-    return () => window.clearTimeout(id)
+    } else {
+      const id = window.setTimeout(() => {
+        active.current = true
+      }, HANDOFF_MS)
+      return () => window.clearTimeout(id)
+    }
   }, [])
 
   useFrame((_, delta) => {
+    const isCutsceneActive = useCutsceneStore.getState().activeCutscene !== null
+    if (isCutsceneActive) return
+
     if (!active.current || !targetRef.current) return
     const target = targetRef.current
 

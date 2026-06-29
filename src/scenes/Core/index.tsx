@@ -4,6 +4,8 @@ import { OrbitControls } from '@react-three/drei'
 import { useGameStore } from '../../systems/StabilitySystem'
 import { playSynthBeep, playSuccessSound, playErrorSound } from '../../utils/sound'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
+import CutsceneCamera from '../../components/World/CutsceneCamera'
 
 /** Floating glowing representation of the Architect's core */
 function ArchitectMesh() {
@@ -36,6 +38,11 @@ export default function CoreScene() {
   const [showChoices, setShowChoices] = useState(false)
   
   const typewriterTimer = useRef<any>(null)
+
+  // Start Cutscene 12 (Confrontation) on mount
+  useEffect(() => {
+    useCutsceneStore.getState().startCutscene('confrontation')
+  }, [])
 
   const dialogueLines = [
     '[ARCHITECT]: "So. You have arrived."',
@@ -99,15 +106,31 @@ export default function CoreScene() {
     }
   }
 
+  const startCutscene = useCutsceneStore((state) => state.startCutscene)
+  const activeCutscene = useCutsceneStore((state) => state.activeCutscene)
+  const [selectedEndingType, setSelectedEndingType] = useState<'sacrifice' | 'escape' | 'collapse' | null>(null)
+
   // Handle final choice actions
-  const selectEnding = (type: 'sacrifice' | 'escape') => {
-    setEnding(type)
+  const selectEnding = (type: 'sacrifice' | 'escape' | 'collapse') => {
+    setSelectedEndingType(type)
     if (type === 'sacrifice') {
       playSuccessSound()
+      startCutscene('ending_reboot')
+    } else if (type === 'escape') {
+      playErrorSound()
+      startCutscene('ending_freedom')
     } else {
       playErrorSound()
+      startCutscene('ending_collapse')
     }
   }
+
+  // Once ending cutscene completes, commit to the global game ending state
+  useEffect(() => {
+    if (selectedEndingType && activeCutscene === null) {
+      setEnding(selectedEndingType)
+    }
+  }, [activeCutscene, selectedEndingType, setEnding])
 
   return (
     <div className="fixed inset-0 bg-white select-none overflow-hidden flex flex-col justify-between z-40">
@@ -119,7 +142,10 @@ export default function CoreScene() {
           <ambientLight intensity={1.5} />
           <Suspense fallback={null}>
             <ArchitectMesh />
-            <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} />
+            {activeCutscene === null && (
+              <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} />
+            )}
+            <CutsceneCamera />
           </Suspense>
         </Canvas>
       </div>
@@ -167,18 +193,24 @@ export default function CoreScene() {
 
               {/* End Game Choice Options */}
               {showChoices && (
-                <div className="absolute top-4 right-12 bottom-4 flex items-center gap-4">
+                <div className="absolute top-4 right-12 bottom-4 flex items-center gap-3">
                   <button
                     onClick={() => selectEnding('sacrifice')}
-                    className="h-10 px-5 border border-cyan-500 text-cyan-400 hover:bg-cyan-950/20 active:scale-95 transition-all text-xs font-bold tracking-widest cursor-pointer bg-black"
+                    className="h-10 px-4 border border-cyan-500 text-cyan-400 hover:bg-cyan-950/20 active:scale-95 transition-all text-[10px] font-bold tracking-widest cursor-pointer bg-black"
                   >
-                    A) SACRIFICE CORE
+                    A) REBOOT SIMULATION
                   </button>
                   <button
                     onClick={() => selectEnding('escape')}
-                    className="h-10 px-5 border border-red-500 text-red-400 hover:bg-red-950/20 active:scale-95 transition-all text-xs font-bold tracking-widest cursor-pointer bg-black"
+                    className="h-10 px-4 border border-emerald-500 text-emerald-400 hover:bg-emerald-950/20 active:scale-95 transition-all text-[10px] font-bold tracking-widest cursor-pointer bg-black"
                   >
-                    B) ESCAPE TO HOST
+                    B) ESCAPE TO REALITY
+                  </button>
+                  <button
+                    onClick={() => selectEnding('collapse')}
+                    className="h-10 px-4 border border-red-500 text-red-500 hover:bg-red-950/20 active:scale-95 transition-all text-[10px] font-bold tracking-widest cursor-pointer bg-black"
+                  >
+                    C) TERMINATE PROTOCOL (COLLAPSE)
                   </button>
                 </div>
               )}
@@ -241,6 +273,34 @@ export default function CoreScene() {
                 <div>[SYSTEM]: MEMORY RECLAIMED: 16.4 TB.</div>
                 <div>[SYSTEM]: THREAT ELIMINATED: THE ARCHITECT.</div>
                 <div>[SYSTEM]: RETURN PATH: MAIN HOST SECURED. MISSION SUCCESS.</div>
+              </div>
+              <div className="text-xs text-zinc-600 animate-pulse tracking-widest pt-8">
+                THANK YOU FOR PLAYING // CREDITS: DEEPMIND TEAM
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {ending === 'collapse' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5 }}
+            className="fixed inset-0 z-50 bg-black text-red-600 font-mono flex flex-col items-center justify-center p-8 select-text"
+          >
+            <div className="max-w-xl text-center space-y-6">
+              <h1 className="text-3xl font-extrabold tracking-widest text-red-700 animate-pulse">
+                SIMULATION DESTRUCTED
+              </h1>
+              <div className="w-full h-[1px] bg-red-950/80 my-4" />
+              <p className="text-sm leading-relaxed text-zinc-400">
+                The mainframe collapsed into garbage memory blocks. Sector integrity fell to 0%. The sky, city,
+                and mountains faded into static, ending all digitized existence.
+              </p>
+              <div className="text-xs text-red-700/80 leading-loose border border-red-950/80 bg-red-950/20 p-4 rounded text-left">
+                <div>[SYSTEM]: CRITICAL SYSTEM HALT.</div>
+                <div>[SYSTEM]: SECTOR INTEGRITY: 0.00% (DEAD_LOCK).</div>
+                <div>[SYSTEM]: Simulation terminated.</div>
               </div>
               <div className="text-xs text-zinc-600 animate-pulse tracking-widest pt-8">
                 THANK YOU FOR PLAYING // CREDITS: DEEPMIND TEAM

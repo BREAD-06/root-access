@@ -143,6 +143,40 @@ export default function WorldMap({ onClose }: WorldMapProps) {
             <circle cx="0" cy="0" r="140" fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" strokeDasharray="5,5" />
             <circle cx="0" cy="0" r="85" fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
 
+            {/* Forest Region Ring overlay */}
+            <circle cx="0" cy="0" r={440 * 3.5} fill="rgba(13, 148, 136, 0.03)" stroke="rgba(13, 148, 136, 0.12)" strokeWidth="1.5" />
+            <circle cx="0" cy="0" r={115 * 3.5} fill="none" stroke="rgba(13, 148, 136, 0.15)" strokeWidth="1" strokeDasharray="4,4" />
+
+            {/* Digital Lake (cyan pool) */}
+            <circle cx={170 * 3.5} cy={-170 * 3.5} r={65 * 3.5} fill="rgba(6, 182, 212, 0.08)" stroke="rgba(6, 182, 212, 0.25)" strokeWidth="1" />
+            
+            {/* Abandoned Outpost Landmark */}
+            <g transform={`translate(${-200 * 3.5}, ${-250 * 3.5})`}>
+              <polygon points="0,-8 7,5 -7,5" fill="rgba(249, 115, 22, 0.15)" stroke="rgba(249, 115, 22, 0.55)" strokeWidth="0.8" />
+              <circle cx="0" cy="0" r="3" fill="#f97316" />
+              <text x="0" y="-12" fill="#f97316" fontSize="6" fontWeight="bold" textAnchor="middle">GENESIS OUTPOST</text>
+            </g>
+
+            {/* Rebel Camp Landmark */}
+            <g transform={`translate(${-250 * 3.5}, ${-220 * 3.5})`}>
+              <polygon points="0,-7 6,4 -6,4" fill="rgba(20, 184, 166, 0.2)" stroke="rgba(20, 184, 166, 0.6)" strokeWidth="0.8" />
+              <circle cx="0" cy="0" r="2.5" fill="#14b8a6" />
+              <text x="0" y="-11" fill="#14b8a6" fontSize="6" fontWeight="bold" textAnchor="middle">REBEL CAMP</text>
+            </g>
+
+            {/* Backdoor Port Landmark */}
+            <g transform={`translate(${300 * 3.5}, ${-260 * 3.5})`}>
+              <rect x="-4" y="-4" width="8" height="8" fill="rgba(6, 182, 212, 0.2)" stroke="rgba(6, 182, 212, 0.6)" strokeWidth="0.8" />
+              <circle cx="0" cy="0" r="2.5" fill="#06b6d4" />
+              <text x="0" y="-11" fill="#06b6d4" fontSize="6" fontWeight="bold" textAnchor="middle">BACKDOOR PORT</text>
+            </g>
+
+            {/* Memory Fragment Landmark */}
+            <g transform={`translate(${-320 * 3.5}, ${180 * 3.5})`}>
+              <polygon points="0,-6 4,0 0,6 -4,0" fill="rgba(0, 243, 255, 0.2)" stroke="rgba(255, 255, 255, 0.6)" strokeWidth="0.8" />
+              <text x="0" y="11" fill="#00f3ff" fontSize="6" fontWeight="bold" textAnchor="middle">MEMORY STACK</text>
+            </g>
+
             {/* Roads */}
             <g opacity="0.35">
               {Array.from({ length: 9 }).map((_, i) => {
@@ -281,6 +315,18 @@ export default function WorldMap({ onClose }: WorldMapProps) {
               <div className="flex justify-between border-b border-white/5 pb-1">
                 <span>Industrial Node</span>
                 <span className="text-amber-500">CORRUPT</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1">
+                <span>Genesis Outpost</span>
+                <span className="text-amber-400">ABANDONED</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1">
+                <span>Rebel Camp</span>
+                <span className="text-teal-400">ACTIVE</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1">
+                <span>Backdoor Port</span>
+                <span className="text-cyan-400">ONLINE</span>
               </div>
             </div>
           </div>

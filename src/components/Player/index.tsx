@@ -7,6 +7,7 @@ import type { RapierRigidBody } from '@react-three/rapier'
 import { Group, Vector3 } from 'three'
 import { usePlayerControls } from './usePlayerControls'
 import { useGameStore } from '../../systems/StabilitySystem'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
 
 const PLAYER_URL = '/assets/characters/Exo Gray.fbx'
 const IDLE_URL = '/assets/animations/Breathing Idle.fbx'
@@ -45,7 +46,8 @@ export default function Player({ targetRef }: PlayerProps) {
   const controls = usePlayerControls()
   const isConsoleOpen = useGameStore((s) => s.isConsoleOpen)
   const isDialogueActive = useGameStore((s) => s.currentDialogue !== null)
-  const frozen = isConsoleOpen || isDialogueActive
+  const isCutsceneActive = useCutsceneStore((s) => s.activeCutscene !== null)
+  const frozen = isConsoleOpen || isDialogueActive || isCutsceneActive
 
   // Character mesh + the four animation clips (named for useAnimations).
   const model = useFBX(PLAYER_URL)

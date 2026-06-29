@@ -73,14 +73,7 @@ export default function CityGrid() {
 
   return (
     <group>
-      {/* Ground plane */}
-      <RigidBody type="fixed" colliders={false}>
-        <mesh receiveShadow position={[0, -2, 0]}>
-          <boxGeometry args={[200, 4, 200]} />
-          <meshStandardMaterial color="#b0b8c8" />
-        </mesh>
-        <CuboidCollider args={[100, 2, 100]} position={[0, -2, 0]} />
-      </RigidBody>
+
 
       {/* One fixed body holding all building wall colliders */}
       <RigidBody type="fixed" colliders={false}>

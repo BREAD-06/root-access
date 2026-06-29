@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../systems/StabilitySystem'
+import { useCutsceneStore } from '../../systems/CutsceneSystem'
 import StabilityMeter from './StabilityMeter'
 import DialogueOverlay from './DialogueOverlay'
 import StabilityStatusPanel from './StabilityStatusPanel'
@@ -8,6 +9,7 @@ import MissionUI from './MissionUI'
 import Minimap from './Minimap'
 import Compass from './Compass'
 import WorldMap from './WorldMap'
+import CutsceneOverlay from './CutsceneOverlay'
 
 export default function HUD() {
   const currentAct = useGameStore((state) => state.currentAct)
@@ -16,9 +18,10 @@ export default function HUD() {
   const unlockedCommands = useGameStore((state) => state.unlockedCommands)
 
   const [isMapOpen, setIsMapOpen] = useState(false)
+  const activeCutscene = useCutsceneStore((state) => state.activeCutscene)
 
-  // Don't render general HUD in prologue or core confrontation scenes
-  const isMinimalHUD = currentAct === 'prologue' || currentAct === 'core'
+  // Don't render general HUD in prologue, core, or active cutscenes
+  const isMinimalHUD = currentAct === 'prologue' || currentAct === 'core' || activeCutscene !== null
 
   // Map acts to human readable names
   const actNames = {
@@ -53,15 +56,20 @@ export default function HUD() {
     <>
       {/* 1. High-priority dialogue screens */}
       <DialogueOverlay />
+      <CutsceneOverlay />
 
       {/* 2. Toggleable Full Screen World Map Overlay */}
       {isMapOpen ? (
         <WorldMap onClose={() => setIsMapOpen(false)} />
       ) : (
         <>
-          {/* 3. Core stability meters */}
-          <StabilityStatusPanel />
-          <StabilityMeter />
+          {/* 3. Core stability meters (Hidden during cutscenes) */}
+          {!activeCutscene && (
+            <>
+              <StabilityStatusPanel />
+              <StabilityMeter />
+            </>
+          )}
 
           {/* 4. General Gameplay HUD (Not visible in prologue/core) */}
           {!isMinimalHUD && (

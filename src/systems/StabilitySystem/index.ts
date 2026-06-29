@@ -16,7 +16,7 @@ export type Act =
   | 'act5'
   | 'core'
 
-export type Ending = 'sacrifice' | 'escape' | null
+export type Ending = 'sacrifice' | 'escape' | 'collapse' | null
 
 export type CommandName = 'delete' | 'clone' | 'freeze' | 'gravity'
 
@@ -175,14 +175,25 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const cost = COMMAND_COST[commandName] ?? 0
-    set((state) => ({
-      stabilityPercent: Math.max(0, state.stabilityPercent - cost),
-      commandsUsed: state.commandsUsed + 1,
-      worldMutations: {
-        ...state.worldMutations,
-        [`${commandName}:${target}`]: true,
-      },
-    }))
+    set((state) => {
+      const nextCommandsUsed = state.commandsUsed + 1
+      
+      // Trigger Cutscene 3 (The Architect Notices You) on repeated command executions
+      if (nextCommandsUsed === 4) {
+        import('../CutsceneSystem').then((module) => {
+          module.useCutsceneStore.getState().startCutscene('architect_notices')
+        })
+      }
+
+      return {
+        stabilityPercent: Math.max(0, state.stabilityPercent - cost),
+        commandsUsed: nextCommandsUsed,
+        worldMutations: {
+          ...state.worldMutations,
+          [`${commandName}:${target}`]: true,
+        },
+      }
+    })
     // Crossing a threshold may push us into the next act.
     get().checkStabilityThreshold()
   },
@@ -217,10 +228,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     }))
   },
 
-  /** Player discovered a memory fragment. */
   findMemoryFragment: () => {
     set((state) => ({
       memoryFragmentsFound: state.memoryFragmentsFound + 1,
+      stabilityPercent: Math.min(100, state.stabilityPercent + 10)
     }))
   },
 
@@ -252,10 +263,44 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       set({ currentAct: target, unlockedCommands: unlocked })
 
-      // Trigger dialogue for the target act
-      if (target !== 'prologue' && target !== 'core') {
-        get().showDialogue(ACT_DIALOGUES[target])
+      // Trigger cinematic act transition cutscene instead of normal dialog override
+      let cutsceneToPlay: any = null
+      if (target === 'act2') cutsceneToPlay = 'city_distortion'
+      else if (target === 'act3') cutsceneToPlay = 'worldwide_glitch'
+      else if (target === 'act4') cutsceneToPlay = 'memory_vault'
+      else if (target === 'act5') cutsceneToPlay = 'last_defense'
+      else if (target === 'core') cutsceneToPlay = 'approach_core'
+
+      if (cutsceneToPlay) {
+        import('../CutsceneSystem').then((module) => {
+          module.useCutsceneStore.getState().startCutscene(cutsceneToPlay)
+        })
+      } else {
+        // Fallback to normal dialogue for non-cinematic act changes
+        if (target !== 'prologue' && target !== 'core') {
+          get().showDialogue(ACT_DIALOGUES[target])
+        }
       }
+    }
+
+    // Trigger Cutscene 6 (The Rebels) at 70% stability milestone
+    if (stabilityPercent <= 70) {
+      import('../CutsceneSystem').then((module) => {
+        const cutsceneStore = module.useCutsceneStore.getState()
+        if (!cutsceneStore.playedCutscenes['the_rebels'] && cutsceneStore.activeCutscene === null) {
+          cutsceneStore.startCutscene('the_rebels')
+        }
+      })
+    }
+
+    // Trigger Cutscene 7 (Architect's Warning) at 60% stability milestone
+    if (stabilityPercent <= 60) {
+      import('../CutsceneSystem').then((module) => {
+        const cutsceneStore = module.useCutsceneStore.getState()
+        if (!cutsceneStore.playedCutscenes['architect_warning'] && cutsceneStore.activeCutscene === null) {
+          cutsceneStore.startCutscene('architect_warning')
+        }
+      })
     }
   },
 
